@@ -30,3 +30,4 @@ package-lock.json
 # Ignore large media files
 public/img/*.mov
 public/img/*.mp4
+.env

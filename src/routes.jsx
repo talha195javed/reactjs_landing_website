@@ -3,6 +3,7 @@ import AboutPage from "@/pages/AboutPage.jsx";
 import Contact from "@/pages/Contact.jsx";
 import Feature from "@/pages/Feature.jsx";
 import AboutPackage from "@/pages/AboutPackage.jsx";
+import PaymentPage from "@/pages/PaymentPage.jsx";
 import AppDemo from "@/pages/AppDemo.jsx";
 
 export const routes = [
@@ -25,6 +26,11 @@ export const routes = [
     name: "Packages",
     path: "/AboutPackage",
     element: <AboutPackage />,
+  },
+  {
+    name: "",
+    path: "/payment",
+    element: <PaymentPage />,
   },
   {
     name: "",

@@ -1,24 +1,268 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
+import { config } from '@/config';
 import { Button, Typography, Switch } from "@material-tailwind/react";
 import {
   CheckCircleIcon,
   ShieldCheckIcon,
-  ArrowsRightLeftIcon,
   ChartBarIcon,
-  UserGroupIcon,
   CogIcon,
   ServerIcon,
   BellIcon,
-  ClockIcon,
   FingerPrintIcon,
-  CalendarIcon,
-  DocumentTextIcon,
-  GlobeAltIcon
+  GlobeAltIcon,
+  XMarkIcon
 } from "@heroicons/react/24/outline";
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import axios from 'axios';
 import { PageTitle, Footer } from "@/widgets/layout";
 
-const PricingCard = ({ title, price, period, features, popular, annualPrice, onSelect }) => {
+// Stripe Payment Modal Component
+const StripePaymentModal = ({ plan, onClose }) => {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+  const [clientSecret, setClientSecret] = useState('');
+  const [customerDetails, setCustomerDetails] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    package_type: plan.title.toLowerCase(),
+    duration: plan.period === 'year' ? 'yearly' : 'monthly'
+  });
+
+  // Create PaymentIntent when component mounts
+  React.useEffect(() => {
+    const createPaymentIntent = async () => {
+      try {
+        const { data } = await axios.post(
+            `https://web.smartvisitor.io/api/create-payment-intent`,
+            {
+              amount: plan.price * 100, // Convert to fils (100 fils = 1 AED)
+              currency: 'aed',
+              plan: plan.title,
+              billing: plan.period
+            }
+        );
+        setClientSecret(data.clientSecret);
+      } catch (err) {
+        setError(err.response?.data?.error || err.message);
+      }
+    };
+
+    createPaymentIntent();
+  }, [plan]);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setCustomerDetails(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!stripe || !elements || !clientSecret) return;
+    setLoading(true);
+
+    try {
+      // Validate customer details
+      if (!customerDetails.name || !customerDetails.email || !customerDetails.phone) {
+        throw new Error('Please fill in all customer details');
+      }
+
+      if (!/^\S+@\S+\.\S+$/.test(customerDetails.email)) {
+        throw new Error('Please enter a valid email address');
+      }
+
+      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(
+          clientSecret,
+          {
+            payment_method: {
+              card: elements.getElement(CardElement),
+              billing_details: {
+                name: customerDetails.name,
+                email: customerDetails.email,
+                phone: customerDetails.phone
+              }
+            },
+          }
+      );
+
+      if (stripeError) throw stripeError;
+
+      if (paymentIntent.status === 'succeeded') {
+        // Save customer details to backend
+        await axios.post(`https://web.smartvisitor.io/api/save-customer-details`, {
+          ...customerDetails,
+          payment_intent_id: paymentIntent.id,
+          amount: plan.price,
+          currency: 'aed'
+        });
+
+        setPaymentSuccess(true);
+      }
+    } catch (err) {
+      setError(err.message || 'Payment failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg p-8 max-w-md w-full relative">
+          <button
+              onClick={onClose}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+          >
+            <XMarkIcon className="h-6 w-6" />
+          </button>
+
+          {paymentSuccess ? (
+              <div className="text-center">
+                <CheckCircleIcon className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                <Typography variant="h3" className="text-2xl font-bold mb-2">
+                  Payment Successful!
+                </Typography>
+                <Typography className="text-gray-600 mb-6">
+                  Thank you for subscribing to {plan.title} plan.
+                </Typography>
+                <Button
+                    onClick={onClose}
+                    color="green"
+                    className="w-full"
+                >
+                  Continue to Dashboard
+                </Button>
+              </div>
+          ) : (
+              <>
+                <Typography variant="h3" className="text-2xl font-bold mb-4">
+                  Subscribe to {plan.title} Plan
+                </Typography>
+                <Typography className="text-xl font-semibold mb-6">
+                  AED {plan.price}/{plan.period}
+                </Typography>
+
+                <form onSubmit={handleSubmit}>
+                  <div className="mb-6 space-y-4">
+                    <div>
+                      <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
+                        Full Name
+                      </label>
+                      <input
+                          type="text"
+                          id="name"
+                          name="name"
+                          value={customerDetails.name}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          required
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                        Email Address
+                      </label>
+                      <input
+                          type="email"
+                          id="email"
+                          name="email"
+                          value={customerDetails.email}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          required
+                      />
+                    </div>
+
+                    <div>
+                      <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+                        Phone Number
+                      </label>
+                      <input
+                          type="tel"
+                          id="phone"
+                          name="phone"
+                          value={customerDetails.phone}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          required
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Package Type
+                        </label>
+                        <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-100">
+                          {customerDetails.package_type}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Duration
+                        </label>
+                        <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-100">
+                          {customerDetails.duration}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mb-6">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Card Details
+                    </label>
+                    <CardElement
+                        options={{
+                          style: {
+                            base: {
+                              fontSize: '16px',
+                              color: '#424770',
+                              '::placeholder': {
+                                color: '#aab7c4',
+                              },
+                            },
+                            invalid: {
+                              color: '#9e2146',
+                            },
+                          },
+                        }}
+                        className="p-3 border rounded-lg"
+                    />
+                  </div>
+
+                  {error && (
+                      <div className="text-red-500 mb-4 text-sm">
+                        {error}
+                      </div>
+                  )}
+
+                  <Button
+                      type="submit"
+                      disabled={!stripe || loading || !clientSecret}
+                      className="w-full"
+                  >
+                    {loading ? 'Processing...' : `Pay AED ${plan.price}`}
+                  </Button>
+                </form>
+              </>
+          )}
+        </div>
+      </div>
+  );
+};
+
+// PricingCard Component
+const PricingCard = ({ title, price, period, features, popular, onSelect }) => {
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -49,14 +293,9 @@ const PricingCard = ({ title, price, period, features, popular, annualPrice, onS
 
           <div className="mb-8">
             <Typography variant="h1" className="text-5xl font-extrabold text-gray-900 mb-2">
-              {/*AED{price}*/} Free Trial
+              AED {price}
               <span className="text-xl font-medium text-gray-500">/{period}</span>
             </Typography>
-            {annualPrice && (
-                <Typography className="text-sm text-gray-500">
-                  {/*AED{annualPrice} annually (save 20%)*/}
-                </Typography>
-            )}
           </div>
 
           <Button
@@ -65,7 +304,7 @@ const PricingCard = ({ title, price, period, features, popular, annualPrice, onS
               fullWidth
               className={`mb-8 rounded-lg ${popular ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-800 hover:bg-gray-900'} text-white font-bold py-3`}
           >
-            Get Started
+            Subscribe Now
           </Button>
 
           <div className="space-y-4">
@@ -81,6 +320,7 @@ const PricingCard = ({ title, price, period, features, popular, annualPrice, onS
   );
 };
 
+// Feature Comparison Table
 const FeatureComparison = () => {
   const features = [
     {
@@ -96,7 +336,7 @@ const FeatureComparison = () => {
       tiers: {
         basic: "Email only",
         professional: "Email & SMS",
-        enterprise: "Email, SMS"
+        enterprise: "Email, SMS, WhatsApp"
       }
     },
     {
@@ -108,7 +348,7 @@ const FeatureComparison = () => {
       }
     },
     {
-      name: "Custom integrations",
+      name: "Custom Integrations",
       tiers: {
         basic: false,
         professional: false,
@@ -120,15 +360,7 @@ const FeatureComparison = () => {
       tiers: {
         basic: "Basic",
         professional: "Advanced",
-        enterprise: "Premium"
-      }
-    },
-    {
-      name: "System Configuration",
-      tiers: {
-        basic: "Standard",
-        professional: "Enhanced",
-        enterprise: "Enterprise-grade"
+        enterprise: "Premium + API"
       }
     },
     {
@@ -197,6 +429,7 @@ const FeatureComparison = () => {
   );
 };
 
+// Feature Highlight Component
 const FeatureHighlight = ({ icon, title, description }) => {
   const IconComponent = icon;
   return (
@@ -219,15 +452,18 @@ const FeatureHighlight = ({ icon, title, description }) => {
   );
 };
 
-export default function PricingPage() {
+// Main Component
+export default function AboutPackage() {
   const [annualBilling, setAnnualBilling] = useState(true);
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const stripePromise = loadStripe(config.STRIPE_PUB_KEY);
 
   const pricingPlans = [
     {
       title: "Basic",
-      monthlyPrice: "500",
-      annualPrice: "450",
+      monthlyPrice: "40",
+      annualPrice: "36",
       period: "month",
       features: [
         "Up to 200 visitor check-ins/month",
@@ -238,8 +474,8 @@ export default function PricingPage() {
     },
     {
       title: "Professional",
-      monthlyPrice: "1000",
-      annualPrice: "800",
+      monthlyPrice: "80",
+      annualPrice: "72",
       period: "month",
       features: [
         "Unlimited visitor check-ins",
@@ -252,8 +488,8 @@ export default function PricingPage() {
     },
     {
       title: "Enterprise",
-      monthlyPrice: "1500",
-      annualPrice: "1250",
+      monthlyPrice: "120",
+      annualPrice: "108",
       period: "month",
       features: [
         "Unlimited everything",
@@ -299,12 +535,20 @@ export default function PricingPage() {
     }
   ];
 
+  const handlePlanSelect = (plan) => {
+    setSelectedPlan({
+      title: plan.title,
+      price: annualBilling ? plan.annualPrice : plan.monthlyPrice,
+      period: annualBilling ? 'year' : 'month',
+      packageType: plan.title.toLowerCase()
+    });
+    setShowPaymentModal(true);
+  };
 
   return (
       <>
         {/* Hero Section */}
         <section className="relative bg-gradient-to-br from-blue-900 to-blue-800 overflow-hidden">
-          {/* Animated background elements */}
           <div className="absolute inset-0 opacity-10">
             {[...Array(12)].map((_, i) => (
                 <motion.div
@@ -364,7 +608,7 @@ export default function PricingPage() {
                     }}
                 />
                 <Typography className="ml-4 text-white font-medium">
-                  Annual <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded-full ml-2">Save 20%</span>
+                  Annual <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded-full ml-2">Save 10%</span>
                 </Typography>
               </motion.div>
             </motion.div>
@@ -386,11 +630,10 @@ export default function PricingPage() {
                       key={index}
                       title={plan.title}
                       price={annualBilling ? plan.annualPrice : plan.monthlyPrice}
-                      period={plan.period}
+                      period={annualBilling ? 'year' : 'month'}
                       features={plan.features}
                       popular={plan.popular}
-                      annualPrice={annualBilling ? null : `${plan.annualPrice * 12}`}
-                      onSelect={() => setSelectedPlan(plan.title)}
+                      onSelect={() => handlePlanSelect(plan)}
                   />
               ))}
             </motion.div>
@@ -414,7 +657,8 @@ export default function PricingPage() {
                     size="lg"
                     variant="outlined"
                     className="border-blue-600 text-blue-600 hover:bg-blue-50 font-bold rounded-lg px-8 py-3"
-                    onClick={() => (window.location.href = "/Contact")}>
+                    onClick={() => (window.location.href = "/Contact")}
+                >
                   Contact Sales
                 </Button>
               </div>
@@ -475,70 +719,6 @@ export default function PricingPage() {
           </div>
         </section>
 
-        {/* Testimonials */}
-        <section className="py-20 px-6 bg-white">
-          <div className="container mx-auto max-w-6xl">
-            <motion.div
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6 }}
-                className="text-center mb-16"
-            >
-              <Typography variant="h2" className="text-4xl font-bold text-gray-900 mb-4">
-                Trusted by <span className="text-blue-600">Leading</span> Organizations
-              </Typography>
-              <Typography className="text-gray-600 max-w-2xl mx-auto">
-                Join thousands of companies transforming their visitor experience
-              </Typography>
-            </motion.div>
-
-            <div className="grid md:grid-cols-3 gap-8">
-              {[
-                {
-                  quote: "SmartVisitor reduced our check-in times by 75% and eliminated our paper logs completely.",
-                  author: "Sarah K., Office Manager",
-                  company: "TechForward Inc."
-                },
-                {
-                  quote: "The analytics helped us optimize our front desk staffing and improve visitor satisfaction.",
-                  author: "Michael T., Security Director",
-                  company: "Urban Properties"
-                },
-                {
-                  quote: "Implementation was seamless and our visitors love the professional experience.",
-                  author: "Priya M., Facilities Coordinator",
-                  company: "Global Consulting"
-                }
-              ].map((testimonial, index) => (
-                  <motion.div
-                      key={index}
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.6, delay: index * 0.1 }}
-                      className="bg-white p-8 rounded-xl border border-gray-200 shadow-sm"
-                  >
-                    <div className="flex items-center mb-6">
-                      {[...Array(5)].map((_, i) => (
-                          <svg key={i} className="w-5 h-5 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                          </svg>
-                      ))}
-                    </div>
-                    <Typography className="text-gray-700 italic mb-6">
-                      "{testimonial.quote}"
-                    </Typography>
-                    <div>
-                      <Typography className="font-bold text-gray-800">{testimonial.author}</Typography>
-                      <Typography className="text-gray-600">{testimonial.company}</Typography>
-                    </div>
-                  </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
-
         {/* Final CTA */}
         <section className="py-20 px-6 bg-gradient-to-r from-blue-600 to-blue-800">
           <div className="container mx-auto max-w-4xl text-center">
@@ -559,7 +739,8 @@ export default function PricingPage() {
                   <Button
                       size="lg"
                       className="bg-white text-blue-800 font-bold rounded-lg px-8 py-4 shadow-lg"
-                      onClick={() => (window.location.href = "/Contact")}>
+                      onClick={() => (window.location.href = "/Contact")}
+                  >
                     Start Free Trial
                   </Button>
                 </motion.div>
@@ -570,7 +751,8 @@ export default function PricingPage() {
                       className="text-white border-2 border-white hover:bg-white/10 font-bold rounded-lg px-8 py-4"
                       onClick={() => {
                         window.location.href = "/AppDemo";
-                      }}>
+                      }}
+                  >
                     Schedule Demo
                   </Button>
                 </motion.div>
@@ -578,6 +760,16 @@ export default function PricingPage() {
             </motion.div>
           </div>
         </section>
+
+        {/* Stripe Payment Modal */}
+        {showPaymentModal && (
+            <Elements stripe={stripePromise}>
+              <StripePaymentModal
+                  plan={selectedPlan}
+                  onClose={() => setShowPaymentModal(false)}
+              />
+            </Elements>
+        )}
 
         <Footer />
       </>
