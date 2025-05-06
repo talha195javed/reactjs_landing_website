@@ -1,5 +1,5 @@
 import axios from "axios";
-const CHAT_BASE_URL = 'https://server.smartglobalhub.com/api/chat';
+const CHAT_BASE_URL = 'https://server.smartglobalhub.com/api/chat/visitor-chat';
 
 export interface ChatMessage {
     id: string;
