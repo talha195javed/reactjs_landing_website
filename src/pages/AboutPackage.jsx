@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { config } from '@/config';
 import { Button, Typography, Switch } from "@material-tailwind/react";
+import { Tooltip } from "@material-tailwind/react";
 import {
   CheckCircleIcon,
   ShieldCheckIcon,
@@ -41,7 +42,7 @@ const StripePaymentModal = ({ plan, onClose }) => {
         const { data } = await axios.post(
             `https://web.smartvisitor.io/api/create-payment-intent`,
             {
-              amount: plan.price * 100, // Convert to fils (100 fils = 1 AED)
+              amount: plan.price * 100,
               currency: 'aed',
               plan: plan.title,
               billing: plan.period
@@ -150,10 +151,16 @@ const StripePaymentModal = ({ plan, onClose }) => {
                 </Typography>
 
                 <form onSubmit={handleSubmit}>
+                  <input
+                      type="hidden"
+                      name="client_id"
+                      id="client_id"
+                      value={localStorage.getItem("clientId") || ""}
+                  />
                   <div className="mb-6 space-y-4">
                     <div>
                       <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
-                        Full Name
+                        Full Name On Card
                       </label>
                       <input
                           type="text"
@@ -168,7 +175,7 @@ const StripePaymentModal = ({ plan, onClose }) => {
 
                     <div>
                       <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                        Email Address
+                        Email Confirmation
                       </label>
                       <input
                           type="email"
@@ -263,6 +270,8 @@ const StripePaymentModal = ({ plan, onClose }) => {
 
 // PricingCard Component
 const PricingCard = ({ title, price, period, features, popular, onSelect }) => {
+  const isLoggedIn = localStorage.getItem("isLoggedIn") === "true";
+  const clientId = localStorage.getItem("clientId");
   const [hovered, setHovered] = useState(false);
 
   return (
@@ -298,14 +307,27 @@ const PricingCard = ({ title, price, period, features, popular, onSelect }) => {
             </Typography>
           </div>
 
-          <Button
-              onClick={onSelect}
-              size="lg"
-              fullWidth
-              className={`mb-8 rounded-lg ${popular ? 'bg-blue-600 hover:bg-blue-700' : 'bg-gray-800 hover:bg-gray-900'} text-white font-bold py-3`}
+          <Tooltip
+              content={!isLoggedIn ? "First Sign in or Signup to Subscribe the Package" : ""}
+              placement="top"
+              disabled={isLoggedIn}
           >
-            Subscribe Now
-          </Button>
+  <span>
+    <Button
+        onClick={isLoggedIn ? onSelect : null}
+        size="lg"
+        fullWidth
+        disabled={!isLoggedIn}
+        className={`mb-8 rounded-lg ${
+            popular ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-800 hover:bg-gray-900"
+        } text-white font-bold py-3 ${
+            !isLoggedIn ? "cursor-not-allowed opacity-70" : ""
+        }`}
+    >
+      Subscribe Now
+    </Button>
+  </span>
+          </Tooltip>
 
           <div className="space-y-4">
             {features.map((feature, index) => (

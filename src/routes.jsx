@@ -1,10 +1,12 @@
-import { Home, SignIn, SignUp } from "@/pages";
+import { Home } from "@/pages";
 import AboutPage from "@/pages/AboutPage.jsx";
 import Contact from "@/pages/Contact.jsx";
 import Feature from "@/pages/Feature.jsx";
 import AboutPackage from "@/pages/AboutPackage.jsx";
 import PaymentPage from "@/pages/PaymentPage.jsx";
 import AppDemo from "@/pages/AppDemo.jsx";
+import SignUp from "@/pages/SignUp";
+import SignIn from "@/pages/SignIn";
 
 export const routes = [
   {
@@ -41,6 +43,16 @@ export const routes = [
     name: "",
     path: "/Contact",
     element: <Contact />,
+  },
+  {
+    name: "",
+    path: "/signup",
+    element: <SignUp />,
+  },
+  {
+    name: "",
+    path: "/signin",
+    element: <SignIn />,
   },
 ];
 

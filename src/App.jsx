@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { AuthProvider } from '@/contexts/AuthContext';
 import { Navbar } from "@/widgets/layout";
 import routes from "@/routes";
 import Chatbot from '@/components/Chatbot1/Chatbot';
 import ChatFAB from "@/components/chatBot/ChatFAB.jsx"; // Adjust path as needed
+import { ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 function App() {
     const { pathname } = useLocation();
@@ -28,6 +31,7 @@ function App() {
                 <Route path="*" element={<Navigate to="/home" replace />} />
             </Routes>
             <ChatFAB/>
+            <ToastContainer position="top-right" autoClose={3000} />
         </>
     );
 }
