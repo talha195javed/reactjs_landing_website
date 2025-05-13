@@ -10,8 +10,9 @@ import {
 } from "@material-tailwind/react";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
 
-export function Navbar({ brandName, routes, action }) {
+export function Navbar({ brandName, routes }) {
     const [openNav, setOpenNav] = useState(false);
+    const [isLoggedIn, setIsLoggedIn] = useState(localStorage.getItem("isLoggedIn") === "true");
 
     useEffect(() => {
         const handleResize = () => {
@@ -20,6 +21,12 @@ export function Navbar({ brandName, routes, action }) {
         window.addEventListener("resize", handleResize);
         return () => window.removeEventListener("resize", handleResize);
     }, []);
+
+    const handleLogout = () => {
+        localStorage.clear();
+        setIsLoggedIn(false);
+        window.location.href = "/";
+    };
 
     const navList = (
         <ul className="mb-4 mt-2 flex flex-col gap-4 lg:mb-0 lg:mt-0 lg:flex-row lg:items-center lg:gap-8">
@@ -83,10 +90,39 @@ export function Navbar({ brandName, routes, action }) {
 
                         <div className="hidden lg:flex items-center gap-8 h-full">
                             <div className="hidden lg:block h-full flex items-center">{navList}</div>
-                            <div className="hidden lg:flex h-full items-center">
-                                {React.cloneElement(action, {
-                                    className: "bg-blue-600 text-white hover:bg-blue-700 transition-colors shadow-md h-10 flex items-center rounded-lg",
-                                })}
+                            <div className="hidden lg:flex h-full items-center gap-4">
+                                <Button
+                                    size="md"
+                                    className="lg:w-auto px-6 py-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium shadow-md hover:shadow-lg transition-all duration-300 hover:from-indigo-600 hover:to-blue-700"
+                                    onClick={() => (window.location.href = "/Contact")}
+                                >
+                                    Contact Us
+                                </Button>
+
+                                {isLoggedIn ? (
+                                    <Button
+                                        color="red"
+                                        size="md"
+                                        className="rounded-lg"
+                                        onClick={handleLogout}
+                                    >
+                                        Logout
+                                    </Button>
+                                ) : (
+                                    <>
+                                        <Link to="/signup">
+                                            <Button size="md" className="rounded-lg bg-blue-600 text-white">
+                                                Sign Up
+                                            </Button>
+                                        </Link>
+                                        <Link to="/signin">
+                                            <Button size="md" className="rounded-lg bg-gray-900 text-white">
+                                                Sign In
+                                            </Button>
+                                        </Link>
+                                    </>
+                                )}
+
                             </div>
                         </div>
 
@@ -109,14 +145,36 @@ export function Navbar({ brandName, routes, action }) {
                     <div className="pb-4 pt-2">
                         {navList}
                         <div className="flex flex-col gap-2 px-4">
-                            {React.cloneElement(action, {
-                                className: "w-full h-12 flex items-center justify-center bg-blue-600 text-white rounded-lg",
-                            })}
+                            {isLoggedIn ? (
+                                <Button
+                                    color="red"
+                                    size="sm"
+                                    fullWidth
+                                    className="rounded-lg"
+                                    onClick={handleLogout}
+                                >
+                                    Logout
+                                </Button>
+                            ) : (
+                                <>
+                                    <Link to="/signup">
+                                        <Button size="sm" fullWidth className="rounded-lg bg-blue-600 text-white">
+                                            Sign Up
+                                        </Button>
+                                    </Link>
+                                    <Link to="/signin">
+                                        <Button size="sm" fullWidth className="rounded-lg bg-gray-900 text-white">
+                                            Sign In
+                                        </Button>
+                                    </Link>
+                                </>
+                            )}
                             <Button
                                 variant="outlined"
                                 size="sm"
                                 fullWidth
                                 className="border-gray-900 text-gray-900 h-12 flex items-center justify-center rounded-lg"
+                                onClick={() => (window.location.href = "/Contact")}
                             >
                                 Contact Sales
                             </Button>
@@ -130,22 +188,11 @@ export function Navbar({ brandName, routes, action }) {
 
 Navbar.defaultProps = {
     brandName: "SmartVisitor.io",
-    action: (
-        <Button size="md" className="lg:w-auto px-6 rounded-lg" onClick={() => (window.location.href = "/Contact")}>
-            Contact Us
-        </Button>
-    ),
-    action: (
-        <Button size="md" className="lg:w-auto px-6 rounded-lg" onClick={() => (window.location.href = "/Contact")}>
-            Contact Us
-        </Button>
-    ),
 };
 
 Navbar.propTypes = {
     brandName: PropTypes.string,
     routes: PropTypes.arrayOf(PropTypes.object).isRequired,
-    action: PropTypes.node,
 };
 
 export default Navbar;

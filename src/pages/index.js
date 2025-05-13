@@ -5,5 +5,5 @@ export * from "@/pages/Feature";
 export * from "@/pages/AboutPackage";
 export * from "@/pages/PaymentPage";
 export * from "@/pages/AppDemo";
-export * from "@/pages/sign-in";
-export * from "@/pages/sign-up";
+export * from "@/pages/SignUp";
+export * from "@/pages/SignIn";
