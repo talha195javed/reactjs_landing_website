@@ -1,5 +1,6 @@
 import { Home } from "@/pages";
 import AboutPage from "@/pages/AboutPage.jsx";
+import RecordPage from "@/pages/RecordPage.jsx";
 import Contact from "@/pages/Contact.jsx";
 import Feature from "@/pages/Feature.jsx";
 import AboutPackage from "@/pages/AboutPackage.jsx";
@@ -18,6 +19,11 @@ export const routes = [
     name: "About",
     path: "/AboutPage",
     element: <AboutPage />,
+  },
+  {
+    name: "",
+    path: "/RecordPage",
+    element: <RecordPage />,
   },
   {
     name: "Feature",

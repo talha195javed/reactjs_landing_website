@@ -100,6 +100,12 @@ export function Navbar({ brandName, routes }) {
                                 </Button>
 
                                 {isLoggedIn ? (
+                                    <>
+                                        <Link to="/RecordPage">
+                                            <Button size="md" className="rounded-lg bg-gray-900 text-white">
+                                                My Record Page
+                                            </Button>
+                                        </Link>
                                     <Button
                                         color="red"
                                         size="md"
@@ -108,6 +114,7 @@ export function Navbar({ brandName, routes }) {
                                     >
                                         Logout
                                     </Button>
+                                    </>
                                 ) : (
                                     <>
                                         <Link to="/signup">

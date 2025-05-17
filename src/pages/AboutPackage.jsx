@@ -40,7 +40,7 @@ const StripePaymentModal = ({ plan, onClose }) => {
     const createPaymentIntent = async () => {
       try {
         const { data } = await axios.post(
-            `https://web.smartvisitor.io/api/create-payment-intent`,
+            `http://127.0.0.1:8000/api/create-payment-intent`,
             {
               amount: plan.price * 100,
               currency: 'aed',
@@ -98,11 +98,12 @@ const StripePaymentModal = ({ plan, onClose }) => {
 
       if (paymentIntent.status === 'succeeded') {
         // Save customer details to backend
-        await axios.post(`https://web.smartvisitor.io/api/save-customer-details`, {
+        await axios.post(`http://127.0.0.1:8000/api/save-customer-details`, {
           ...customerDetails,
           payment_intent_id: paymentIntent.id,
           amount: plan.price,
-          currency: 'aed'
+          currency: 'aed',
+          client_id: localStorage.getItem("clientId"),
         });
 
         setPaymentSuccess(true);
@@ -274,6 +275,14 @@ const PricingCard = ({ title, price, period, features, popular, onSelect }) => {
   const clientId = localStorage.getItem("clientId");
   const [hovered, setHovered] = useState(false);
 
+  const handleSubscribeClick = () => {
+    if (!isLoggedIn) {
+      window.location.href = '/signin'; // Redirect to signin page if not logged in
+      return;
+    }
+    onSelect(); // Call the original onSelect if logged in
+  };
+
   return (
       <motion.div
           whileHover={{ y: -10 }}
@@ -312,21 +321,18 @@ const PricingCard = ({ title, price, period, features, popular, onSelect }) => {
               placement="top"
               disabled={isLoggedIn}
           >
-  <span>
-    <Button
-        onClick={isLoggedIn ? onSelect : null}
-        size="lg"
-        fullWidth
-        disabled={!isLoggedIn}
-        className={`mb-8 rounded-lg ${
-            popular ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-800 hover:bg-gray-900"
-        } text-white font-bold py-3 ${
-            !isLoggedIn ? "cursor-not-allowed opacity-70" : ""
-        }`}
-    >
-      Subscribe Now
-    </Button>
-  </span>
+          <span>
+            <Button
+                onClick={handleSubscribeClick}
+                size="lg"
+                fullWidth
+                className={`mb-8 rounded-lg ${
+                    popular ? "bg-blue-600 hover:bg-blue-700" : "bg-gray-800 hover:bg-gray-900"
+                } text-white font-bold py-3`}
+            >
+              Subscribe Now
+            </Button>
+          </span>
           </Tooltip>
 
           <div className="space-y-4">
