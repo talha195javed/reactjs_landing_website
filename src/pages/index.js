@@ -1,5 +1,5 @@
 export * from "@/pages/home";
-export * from "@/pages/AboutPage";
+export * from "@/pages/RecordPage";
 export * from "@/pages/Contact";
 export * from "@/pages/Feature";
 export * from "@/pages/AboutPackage";

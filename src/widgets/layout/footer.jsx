@@ -201,7 +201,7 @@ Footer.defaultProps = {
     {
       name: "Product",
       items: [
-        { name: "About Us", path: "/AboutPage" },
+        { name: "About Us", path: "/RecordPage" },
         { name: "Feature", path: "/Feature" },
         { name: "About Packages", path: "/AboutPackage" },
         { name: "Request Demo", path: "/AppDemo" },
@@ -211,7 +211,7 @@ Footer.defaultProps = {
     {
       name: "Pages",
       items: [
-        { name: "About Us", path: "/AboutPage" },
+        { name: "About Us", path: "/RecordPage" },
         { name: "Feature", path: "/Feature" },
         { name: "About Packages", path: "/AboutPackage" },
         { name: "Request Demo", path: "/AppDemo" },
