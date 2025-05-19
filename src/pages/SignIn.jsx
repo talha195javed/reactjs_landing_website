@@ -29,7 +29,7 @@ export default function SigninPage({ setUser }) {
     setStatus(null);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/client/login", {
+      const response = await fetch("https://web.smartvisitor.io/api/client/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData)
@@ -39,12 +39,16 @@ export default function SigninPage({ setUser }) {
       if (!response.ok) throw new Error(result.message || "Login failed");
 
       toast.success("Login successful");
+      console.log(result);
       localStorage.setItem("isLoggedIn", "true");
       localStorage.setItem("clientId", result.user.id);
+      localStorage.setItem("clientEmail", result.user.email);
       localStorage.setItem("clientUser", JSON.stringify(result));
       console.log("Client User:", JSON.stringify(result));
       navigate("/");
-     // location.reload();
+      setTimeout(function() {
+        location.reload();
+      }, 3000);
 
     } catch (err) {
       toast.error(err.message || "Something went wrong");

@@ -54,6 +54,7 @@ export default function RecordPage() {
       try {
         // Get data from localStorage
         const storedClientUser = localStorage.getItem("clientUser");
+        console.log(storedClientUser);
         if (storedClientUser) {
           const parsedData = JSON.parse(storedClientUser);
 

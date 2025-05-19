@@ -29,7 +29,7 @@ const StripePaymentModal = ({ plan, onClose }) => {
   const [clientSecret, setClientSecret] = useState('');
   const [customerDetails, setCustomerDetails] = useState({
     name: '',
-    email: '',
+    email: localStorage.getItem("clientEmail") || '',
     phone: '',
     package_type: plan.title.toLowerCase(),
     duration: plan.period === 'year' ? 'yearly' : 'monthly'
@@ -40,7 +40,7 @@ const StripePaymentModal = ({ plan, onClose }) => {
     const createPaymentIntent = async () => {
       try {
         const { data } = await axios.post(
-            `http://127.0.0.1:8000/api/create-payment-intent`,
+            `https://web.smartvisitor.io/api/create-payment-intent`,
             {
               amount: plan.price * 100,
               currency: 'aed',
@@ -98,7 +98,7 @@ const StripePaymentModal = ({ plan, onClose }) => {
 
       if (paymentIntent.status === 'succeeded') {
         // Save customer details to backend
-        await axios.post(`http://127.0.0.1:8000/api/save-customer-details`, {
+        await axios.post(`https://web.smartvisitor.io/api/save-customer-details`, {
           ...customerDetails,
           payment_intent_id: paymentIntent.id,
           amount: plan.price,
@@ -184,8 +184,9 @@ const StripePaymentModal = ({ plan, onClose }) => {
                           name="email"
                           value={customerDetails.email}
                           onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 bg-gray-100 cursor-not-allowed"
                           required
+                          readOnly
                       />
                     </div>
 
