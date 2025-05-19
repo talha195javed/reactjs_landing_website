@@ -1,4 +1,4 @@
 export const config = {
     STRIPE_PUB_KEY: 'pk_test_51RHioER6TPn3anLsM5dHoX2W8KlhZldusKq8sZKOHpUXPsPU2uUxYcdh8qMYpP73hcCSnHtT6N3pqnF9Hcyx70TM00ngnQRydG',
-    API_URL: 'http://127.0.0.1:8000/'
+    API_URL: 'https://web.smartvisitor.io/'
 };
