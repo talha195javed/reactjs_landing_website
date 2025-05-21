@@ -27,13 +27,56 @@ const StripePaymentModal = ({ plan, onClose }) => {
   const [loading, setLoading] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [clientSecret, setClientSecret] = useState('');
+
+  // Get client user data from localStorage
+  const clientUser = JSON.parse(localStorage.getItem("clientUser"));
+  const subscriptions = clientUser?.subscriptions || [];
+
+  // Find the latest active subscription (with end date after current date)
+  const getLatestActiveSubscription = () => {
+    if (!subscriptions.length) return null;
+
+    const now = new Date();
+    const activeSubscriptions = subscriptions.filter(sub => {
+      const endDate = new Date(sub.end_date);
+      return endDate > now;
+    });
+
+    if (!activeSubscriptions.length) return null;
+
+    // Sort by end_date descending to get the latest one
+    activeSubscriptions.sort((a, b) =>
+        new Date(b.end_date) - new Date(a.end_date)
+    );
+
+    return activeSubscriptions[0];
+  };
+
+  const latestActiveSubscription = getLatestActiveSubscription();
+  const hasActiveSubscription = !!latestActiveSubscription;
+
   const [customerDetails, setCustomerDetails] = useState({
-    name: '',
-    email: localStorage.getItem("clientEmail") || '',
-    phone: '',
+    name: clientUser?.user?.name || '',
+    email: clientUser?.user?.email || '',
+    phone: clientUser?.user?.phone || '',
     package_type: plan.title.toLowerCase(),
-    duration: plan.period === 'year' ? 'yearly' : 'monthly'
+    duration: plan.period === 'year' ? 'yearly' : 'monthly',
+    // Set default based on whether user has existing subscription
+    startNow: !hasActiveSubscription,
+    startOnExpiry: hasActiveSubscription ? false : false,
+    // Include subscription details if available
+    existing_subscription_id: hasActiveSubscription ? latestActiveSubscription.id : null,
+    existing_subscription_end_date: hasActiveSubscription ? latestActiveSubscription.end_date : null
   });
+
+  // Handle checkbox changes (make them radio-like - only one selectable)
+  const handleDateOptionChange = (option) => {
+    setCustomerDetails(prev => ({
+      ...prev,
+      startNow: option === 'now',
+      startOnExpiry: option === 'expiry'
+    }));
+  };
 
   // Create PaymentIntent when component mounts
   React.useEffect(() => {
@@ -45,7 +88,12 @@ const StripePaymentModal = ({ plan, onClose }) => {
               amount: plan.price * 100,
               currency: 'aed',
               plan: plan.title,
-              billing: plan.period
+              billing: plan.period,
+              // Include package_date in the request
+              package_date: customerDetails.startNow ? 'now' : 'expiry',
+              // Include existing subscription details if available
+              existing_subscription_id: customerDetails.existing_subscription_id,
+              existing_subscription_end_date: customerDetails.existing_subscription_end_date
             }
         );
         setClientSecret(data.clientSecret);
@@ -55,7 +103,7 @@ const StripePaymentModal = ({ plan, onClose }) => {
     };
 
     createPaymentIntent();
-  }, [plan]);
+  }, [plan, customerDetails.startNow, customerDetails.startOnExpiry]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -103,7 +151,11 @@ const StripePaymentModal = ({ plan, onClose }) => {
           payment_intent_id: paymentIntent.id,
           amount: plan.price,
           currency: 'aed',
-          client_id: localStorage.getItem("clientId"),
+          client_id: clientUser?.user?.id,
+          package_date: customerDetails.startNow ? 'now' : 'expiry',
+          // Include existing subscription details if available
+          existing_subscription_id: customerDetails.existing_subscription_id,
+          existing_subscription_end_date: customerDetails.existing_subscription_end_date
         });
 
         setPaymentSuccess(true);
@@ -114,6 +166,7 @@ const StripePaymentModal = ({ plan, onClose }) => {
       setLoading(false);
     }
   };
+
 
   return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -152,12 +205,6 @@ const StripePaymentModal = ({ plan, onClose }) => {
                 </Typography>
 
                 <form onSubmit={handleSubmit}>
-                  <input
-                      type="hidden"
-                      name="client_id"
-                      id="client_id"
-                      value={localStorage.getItem("clientId") || ""}
-                  />
                   <div className="mb-6 space-y-4">
                     <div>
                       <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
@@ -222,6 +269,39 @@ const StripePaymentModal = ({ plan, onClose }) => {
                         <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-100">
                           {customerDetails.duration}
                         </div>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        New Package Starting Date
+                      </label>
+
+                      <div className="mt-2 space-x-4">
+                        <label className="inline-flex items-center">
+                          <input
+                              type="radio"
+                              name="package_date"
+                              checked={customerDetails.startNow}
+                              onChange={() => handleDateOptionChange('now')}
+                              disabled={!hasActiveSubscription} // Disable if no existing subscription
+                              className="form-radio text-blue-600"
+                          />
+                          <span className="ml-2 text-gray-700">Now</span>
+                        </label>
+
+                        {hasActiveSubscription && (
+                            <label className="inline-flex items-center">
+                              <input
+                                  type="radio"
+                                  name="package_date"
+                                  checked={customerDetails.startOnExpiry}
+                                  onChange={() => handleDateOptionChange('expiry')}
+                                  className="form-radio text-blue-600"
+                              />
+                              <span className="ml-2 text-gray-700">On Expiry</span>
+                            </label>
+                        )}
                       </div>
                     </div>
                   </div>
