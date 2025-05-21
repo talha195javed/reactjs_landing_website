@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import PropTypes from "prop-types";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
     Navbar as MTNavbar,
     Collapse,
@@ -9,10 +9,12 @@ import {
     IconButton,
 } from "@material-tailwind/react";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
+import axios from "axios";
 
 export function Navbar({ brandName, routes }) {
     const [openNav, setOpenNav] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(localStorage.getItem("isLoggedIn") === "true");
+    const navigate = useNavigate();
 
     useEffect(() => {
         const handleResize = () => {
@@ -26,6 +28,27 @@ export function Navbar({ brandName, routes }) {
         localStorage.clear();
         setIsLoggedIn(false);
         window.location.href = "/";
+    };
+
+    const handleRecordPageClick = async () => {
+        try {
+            const userId = localStorage.getItem("clientId");
+            if (!userId) {
+                console.error("User ID not found in localStorage.");
+                return;
+            }
+
+            const response = await axios.get(`https://web.smartvisitor.io/api/client/latest?user_id=${userId}`);
+            const result = response.data;
+
+            localStorage.setItem("subscription", JSON.stringify(result));
+            localStorage.setItem("clientId", result.user.id);
+            localStorage.setItem("clientEmail", result.user.email);
+            localStorage.setItem("clientUser", JSON.stringify(result));
+            navigate("/RecordPage");
+        } catch (error) {
+            console.error("Failed to fetch latest subscription:", error);
+        }
     };
 
     const navList = (
@@ -101,19 +124,21 @@ export function Navbar({ brandName, routes }) {
 
                                 {isLoggedIn ? (
                                     <>
-                                        <Link to="/RecordPage">
-                                            <Button size="md" className="rounded-lg bg-gray-900 text-white">
-                                                My Record Page
-                                            </Button>
-                                        </Link>
-                                    <Button
-                                        color="red"
-                                        size="md"
-                                        className="rounded-lg"
-                                        onClick={handleLogout}
-                                    >
-                                        Logout
-                                    </Button>
+                                        <Button
+                                            size="md"
+                                            className="rounded-lg bg-gray-900 text-white"
+                                            onClick={handleRecordPageClick}
+                                        >
+                                            My Record Page
+                                        </Button>
+                                        <Button
+                                            color="red"
+                                            size="md"
+                                            className="rounded-lg"
+                                            onClick={handleLogout}
+                                        >
+                                            Logout
+                                        </Button>
                                     </>
                                 ) : (
                                     <>
@@ -129,7 +154,6 @@ export function Navbar({ brandName, routes }) {
                                         </Link>
                                     </>
                                 )}
-
                             </div>
                         </div>
 
@@ -153,15 +177,25 @@ export function Navbar({ brandName, routes }) {
                         {navList}
                         <div className="flex flex-col gap-2 px-4">
                             {isLoggedIn ? (
-                                <Button
-                                    color="red"
-                                    size="sm"
-                                    fullWidth
-                                    className="rounded-lg"
-                                    onClick={handleLogout}
-                                >
-                                    Logout
-                                </Button>
+                                <>
+                                    <Button
+                                        size="sm"
+                                        fullWidth
+                                        className="rounded-lg bg-gray-900 text-white"
+                                        onClick={handleRecordPageClick}
+                                    >
+                                        My Record Page
+                                    </Button>
+                                    <Button
+                                        color="red"
+                                        size="sm"
+                                        fullWidth
+                                        className="rounded-lg"
+                                        onClick={handleLogout}
+                                    >
+                                        Logout
+                                    </Button>
+                                </>
                             ) : (
                                 <>
                                     <Link to="/signup">
