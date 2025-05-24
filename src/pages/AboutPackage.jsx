@@ -83,7 +83,7 @@ const StripePaymentModal = ({ plan, onClose }) => {
     const createPaymentIntent = async () => {
       try {
         const { data } = await axios.post(
-            `https://web.smartvisitor.io/api/create-payment-intent`,
+            `http://127.0.0.1:8000/api/create-payment-intent`,
             {
               amount: plan.price * 100,
               currency: 'aed',
@@ -146,7 +146,7 @@ const StripePaymentModal = ({ plan, onClose }) => {
 
       if (paymentIntent.status === 'succeeded') {
         // Save customer details to backend
-        await axios.post(`https://web.smartvisitor.io/api/save-customer-details`, {
+        await axios.post(`http://127.0.0.1:8000/api/save-customer-details`, {
           ...customerDetails,
           payment_intent_id: paymentIntent.id,
           amount: plan.price,
